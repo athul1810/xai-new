@@ -293,7 +293,7 @@ def main():
     """, unsafe_allow_html=True)
     
     # API Key input
-    default_api_key = st.session_state.get('gemini_api_key', 'AIzaSyDCAYP70YKUhTY25t5akD7QUpsrU9qnPSE')
+    default_api_key = st.session_state.get('gemini_api_key', '')
     
     api_key = st.sidebar.text_input(
         "Google Gemini API Key",
