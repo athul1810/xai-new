@@ -41,7 +41,8 @@ def query_gemini(user_message, api_key, model="gemini-1.5-flash", chat_history=N
     if not GEMINI_AVAILABLE:
         return "⚠️ Google Generative AI library not installed. Install with: pip install google-generativeai"
     
-    if not api_key or not api_key.strip():
+    # Treat "xxx" as empty placeholder
+    if not api_key or not api_key.strip() or api_key.strip().lower() == "xxx":
         return "⚠️ Please enter your Google Gemini API key in the sidebar."
     
     try:
@@ -303,7 +304,11 @@ def main():
         placeholder="xxx",
         label_visibility="visible"
     )
-    st.session_state.gemini_api_key = api_key
+    # Store API key, but treat "xxx" as empty
+    if api_key and api_key.strip().lower() != "xxx":
+        st.session_state.gemini_api_key = api_key
+    else:
+        st.session_state.gemini_api_key = ""
     
     # Model selection - try common Gemini model names
     # Note: Available models may vary by API key/region
