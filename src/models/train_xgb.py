@@ -17,37 +17,53 @@ def train_xgboost(X_train, y_train, X_val, y_val, random_state=42):
     """Train XGBoost classifier with early stopping."""
     print("Training XGBoost...")
     
-    # Create TF-IDF features
-    embedder = TFIDFEmbedder(max_features=5000, ngram_range=(1, 2))
+    # Create TF-IDF features with better settings for small datasets
+    # Use more features and include trigrams for better discrimination
+    embedder = TFIDFEmbedder(max_features=10000, ngram_range=(1, 3))
     X_train_tfidf = embedder.fit_transform(X_train)
     X_val_tfidf = embedder.transform(X_val)
+    
+    print(f"Feature matrix shape: {X_train_tfidf.shape}")
+    print(f"Non-zero features per sample: {X_train_tfidf.getnnz(axis=1).mean():.1f}")
     
     # Convert to DMatrix for XGBoost
     dtrain = xgb.DMatrix(X_train_tfidf, label=y_train)
     dval = xgb.DMatrix(X_val_tfidf, label=y_val)
     
-    # Parameters
+    # Parameters - optimized for better discrimination and generalization
     params = {
         'objective': 'binary:logistic',
         'eval_metric': 'auc',
-        'max_depth': 6,
-        'learning_rate': 0.1,
-        'subsample': 0.8,
-        'colsample_bytree': 0.8,
+        'max_depth': 8,  # Moderate depth for better generalization
+        'learning_rate': 0.05,  # Slightly higher learning rate
+        'subsample': 0.8,  # More data per tree
+        'colsample_bytree': 0.8,  # More features per tree
+        'min_child_weight': 1,  # Standard value for better generalization
+        'gamma': 0.1,  # Small minimum loss reduction
+        'reg_alpha': 0.1,  # Light L1 regularization
+        'reg_lambda': 1.0,  # Moderate L2 regularization
+        'scale_pos_weight': 1,  # Handle class imbalance if needed
+        'tree_method': 'hist',  # Faster training
         'random_state': random_state,
         'n_jobs': -1
     }
     
-    # Train with early stopping
+    # Train with early stopping - use more rounds for small datasets
     evals = [(dtrain, 'train'), (dval, 'val')]
     model = xgb.train(
         params,
         dtrain,
-        num_boost_round=1000,
+        num_boost_round=2000,  # More rounds for small datasets
         evals=evals,
-        early_stopping_rounds=50,
-        verbose_eval=100
+        early_stopping_rounds=100,  # More patience
+        verbose_eval=50
     )
+    
+    # Check prediction variance
+    train_preds = model.predict(dtrain)
+    val_preds = model.predict(dval)
+    print(f"\nPrediction variance - Train: {np.var(train_preds):.6f}, Val: {np.var(val_preds):.6f}")
+    print(f"Prediction range - Train: [{train_preds.min():.4f}, {train_preds.max():.4f}], Val: [{val_preds.min():.4f}, {val_preds.max():.4f}]")
     
     # Predictions
     y_pred = (model.predict(dval) > 0.5).astype(int)
@@ -97,11 +113,18 @@ def main():
     xgb_results['embedder'].save('trained_models/xgb_tfidf.pkl')
     
     # Save feature importance
-    importance_df = pd.DataFrame([
-        {'feature': k, 'importance': v} 
-        for k, v in xgb_results['feature_importance'].items()
-    ]).sort_values('importance', ascending=False)
-    importance_df.to_csv('outputs/xgb_feature_importance.csv', index=False)
+    if xgb_results['feature_importance']:
+        importance_df = pd.DataFrame([
+            {'feature': k, 'importance': v} 
+            for k, v in xgb_results['feature_importance'].items()
+        ])
+        if len(importance_df) > 0:
+            importance_df = importance_df.sort_values('importance', ascending=False)
+            importance_df.to_csv('outputs/xgb_feature_importance.csv', index=False)
+        else:
+            print("No feature importance data available (likely due to small dataset)")
+    else:
+        print("No feature importance data available (likely due to small dataset)")
     
     # Save metrics
     save_metrics(xgb_results['metrics'], 'XGBoost')

@@ -4,14 +4,25 @@ Ensemble stacking: Combine XGBoost and BERT predictions using Logistic Regressio
 
 import pandas as pd
 import numpy as np
-import xgboost as xgb
-import torch
 from sklearn.linear_model import LogisticRegression
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import joblib
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
+
+# Optional imports
+try:
+    import xgboost as xgb
+    XGBOOST_AVAILABLE = True
+except Exception:
+    XGBOOST_AVAILABLE = False
+
+try:
+    import torch
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
 
 from features.embeddings import TFIDFEmbedder
 from utils.metrics import compute_metrics, plot_confusion_matrix, save_metrics
@@ -19,6 +30,9 @@ from utils.metrics import compute_metrics, plot_confusion_matrix, save_metrics
 def load_xgb_model(model_path='trained_models/xgb_model.json', 
                    embedder_path='trained_models/xgb_tfidf.pkl'):
     """Load trained XGBoost model."""
+    if not XGBOOST_AVAILABLE:
+        raise ImportError("XGBoost not available. Install libomp: brew install libomp")
+    
     model = xgb.Booster()
     model.load_model(model_path)
     
@@ -29,6 +43,9 @@ def load_xgb_model(model_path='trained_models/xgb_model.json',
 
 def load_bert_model(model_path='trained_models/bert'):
     """Load trained BERT model."""
+    if not TRANSFORMERS_AVAILABLE:
+        raise ImportError("Transformers not available. Install with: pip install transformers torch")
+    
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     model.eval()
@@ -37,12 +54,18 @@ def load_bert_model(model_path='trained_models/bert'):
 
 def get_xgb_predictions(model, embedder, texts):
     """Get XGBoost predictions."""
+    if not XGBOOST_AVAILABLE:
+        raise ImportError("XGBoost not available")
     X_tfidf = embedder.transform(texts)
     dmatrix = xgb.DMatrix(X_tfidf)
     return model.predict(dmatrix)
 
 def get_bert_predictions(model, tokenizer, texts, device='cpu', batch_size=16):
     """Get BERT predictions."""
+    if not TRANSFORMERS_AVAILABLE:
+        raise ImportError("Transformers not available")
+    
+    import torch
     model.to(device)
     predictions = []
     

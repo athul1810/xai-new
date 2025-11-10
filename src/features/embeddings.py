@@ -5,10 +5,17 @@ Feature extraction: TF-IDF and BERT embeddings for text classification.
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from transformers import AutoTokenizer, AutoModel
-import torch
 from pathlib import Path
 import joblib
+
+# Optional transformers import
+try:
+    from transformers import AutoTokenizer, AutoModel
+    import torch
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    print("Warning: transformers not available. BERT embeddings will not work.")
 
 class TFIDFEmbedder:
     """TF-IDF vectorizer wrapper."""
@@ -42,11 +49,22 @@ class TFIDFEmbedder:
         """Load vectorizer."""
         self.vectorizer = joblib.load(path)
         return self
+    
+    def get_feature_names(self):
+        """Get feature names from vectorizer."""
+        try:
+            return self.vectorizer.get_feature_names_out()
+        except AttributeError:
+            # Fallback for older sklearn versions
+            return self.vectorizer.get_feature_names()
 
 class BERTEmbedder:
     """BERT-based embeddings using transformers."""
     
     def __init__(self, model_name='distilbert-base-uncased', device=None):
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError("transformers library is required for BERT embeddings. Install with: pip install transformers torch")
+        
         self.model_name = model_name
         self.device = device if device else ('cuda' if torch.cuda.is_available() else 'cpu')
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)

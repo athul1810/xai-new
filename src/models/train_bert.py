@@ -65,21 +65,27 @@ def train_bert(X_train, y_train, X_val, y_val, model_name='distilbert-base-uncas
     train_dataset = train_dataset.map(tokenize_function, batched=True)
     val_dataset = val_dataset.map(tokenize_function, batched=True)
     
-    # Training arguments
+    # Training arguments - adjusted for smaller dataset
+    num_samples = len(X_train)
+    num_epochs = 5 if num_samples < 500 else 3
+    warmup_steps = min(100, num_samples // 10)
+    logging_steps = max(10, num_samples // 20)
+    
     training_args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=3,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
-        warmup_steps=100,
+        num_train_epochs=num_epochs,
+        per_device_train_batch_size=8,  # Smaller batch for stability
+        per_device_eval_batch_size=8,
+        warmup_steps=warmup_steps,
         weight_decay=0.01,
         logging_dir=f'{output_dir}/logs',
-        logging_steps=50,
-        evaluation_strategy='epoch',
+        logging_steps=logging_steps,
+        eval_strategy='epoch',  # Changed from evaluation_strategy
         save_strategy='epoch',
         load_best_model_at_end=True,
         metric_for_best_model='f1',
-        seed=random_state
+        seed=random_state,
+        save_total_limit=2  # Keep only best 2 models
     )
     
     # Create trainer

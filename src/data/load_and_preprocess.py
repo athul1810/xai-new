@@ -128,16 +128,37 @@ def load_and_preprocess(input_path='data/raw.csv', output_dir='data',
     X = df_clean[['text']]
     y = df_clean['label']
     
+    # Check if we have enough samples for stratified split
+    min_samples_per_class = min(y.value_counts().values)
+    use_stratify = min_samples_per_class >= 2
+    
     # First split: train vs (val + test)
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, test_size=(test_size + val_size), random_state=random_state, stratify=y
-    )
+    if use_stratify:
+        X_train, X_temp, y_train, y_temp = train_test_split(
+            X, y, test_size=(test_size + val_size), random_state=random_state, stratify=y
+        )
+    else:
+        print("Warning: Not enough samples for stratified split. Using random split.")
+        X_train, X_temp, y_train, y_temp = train_test_split(
+            X, y, test_size=(test_size + val_size), random_state=random_state
+        )
     
     # Second split: val vs test
     val_size_adjusted = val_size / (test_size + val_size)
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, test_size=(1 - val_size_adjusted), random_state=random_state, stratify=y_temp
-    )
+    if use_stratify and len(y_temp) > 1:
+        min_temp = min(y_temp.value_counts().values) if len(y_temp.value_counts()) > 1 else 0
+        use_stratify_temp = min_temp >= 2
+    else:
+        use_stratify_temp = False
+    
+    if use_stratify_temp:
+        X_val, X_test, y_val, y_test = train_test_split(
+            X_temp, y_temp, test_size=(1 - val_size_adjusted), random_state=random_state, stratify=y_temp
+        )
+    else:
+        X_val, X_test, y_val, y_test = train_test_split(
+            X_temp, y_temp, test_size=(1 - val_size_adjusted), random_state=random_state
+        )
     
     # Combine back with labels
     train_df = pd.concat([X_train, y_train], axis=1)

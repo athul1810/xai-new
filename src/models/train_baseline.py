@@ -19,13 +19,14 @@ def train_svm(X_train, y_train, X_val, y_val, random_state=42):
     """Train SVM classifier."""
     print("Training SVM...")
     
-    # Create pipeline
-    embedder = TFIDFEmbedder(max_features=5000, ngram_range=(1, 2))
+    # Create pipeline with more features and better ngrams
+    embedder = TFIDFEmbedder(max_features=10000, ngram_range=(1, 3))
     X_train_tfidf = embedder.fit_transform(X_train)
     X_val_tfidf = embedder.transform(X_val)
     
-    # Train SVM
-    svm = SVC(kernel='rbf', probability=True, random_state=random_state, C=1.0, gamma='scale')
+    # Train SVM with better hyperparameters
+    # Use linear kernel for better generalization, or RBF with tuned C
+    svm = SVC(kernel='linear', probability=True, random_state=random_state, C=0.1)
     svm.fit(X_train_tfidf, y_train)
     
     # Predictions
@@ -44,19 +45,23 @@ def train_svm(X_train, y_train, X_val, y_val, random_state=42):
         'probabilities': y_proba
     }
 
-def train_random_forest(X_train, y_train, X_val, y_val, random_state=42, n_estimators=100):
+def train_random_forest(X_train, y_train, X_val, y_val, random_state=42, n_estimators=200):
     """Train RandomForest classifier."""
     print("Training RandomForest...")
     
-    # Create pipeline
-    embedder = TFIDFEmbedder(max_features=5000, ngram_range=(1, 2))
+    # Create pipeline with more features
+    embedder = TFIDFEmbedder(max_features=10000, ngram_range=(1, 3))
     X_train_tfidf = embedder.fit_transform(X_train)
     X_val_tfidf = embedder.transform(X_val)
     
-    # Train RandomForest
+    # Train RandomForest with better hyperparameters for generalization
     rf = RandomForestClassifier(
         n_estimators=n_estimators,
-        max_depth=20,
+        max_depth=15,  # Reduce depth to prevent overfitting
+        min_samples_split=5,  # Require more samples to split
+        min_samples_leaf=2,  # Require minimum samples in leaf
+        max_features='sqrt',  # Use sqrt of features for better generalization
+        class_weight='balanced',  # Handle class imbalance
         random_state=random_state,
         n_jobs=-1
     )

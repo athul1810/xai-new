@@ -25,17 +25,27 @@ wheels/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb_checkpoints/
 
 # Models and outputs
 trained_models/*.pkl
 trained_models/*.json
 trained_models/bert/
+trained_models/**/*.pkl
+trained_models/**/*.json
 outputs/*
 !outputs/.gitkeep
+outputs/**/*.png
+outputs/**/*.csv
+outputs/**/*.html
 
 # Data (keep structure but ignore large files)
 data/*.csv
 !data/.gitkeep
+
+# Old frontend/backend (removed - using Streamlit now)
+frontend/
+backend/
 
 # IDE
 .vscode/
@@ -47,10 +57,18 @@ data/*.csv
 # OS
 .DS_Store
 Thumbs.db
+**/.DS_Store
 
 # Streamlit
 .streamlit/
+.streamlit/**/*
 
 # Logs
 *.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.cache
 
