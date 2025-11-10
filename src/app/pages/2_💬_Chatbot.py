@@ -299,7 +299,8 @@ def main():
         "Google Gemini API Key",
         type="password",
         help="Enter your Google Gemini API key. Get one at https://makersuite.google.com/app/apikey",
-        value=default_api_key,
+        value=default_api_key if default_api_key else "xxx",
+        placeholder="xxx",
         label_visibility="visible"
     )
     st.session_state.gemini_api_key = api_key
